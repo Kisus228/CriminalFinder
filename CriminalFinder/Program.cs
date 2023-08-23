@@ -1,5 +1,7 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
+using System.Diagnostics;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using ConsoleTableExt;
@@ -9,6 +11,8 @@ using UrodChecker.Limits;
 using UrodChecker.Nbt;
 
 var limits = JsonSerializer.Deserialize<LimitsWrapper>(File.ReadAllText("./limits.json"))!.Limits;
+
+Console.WriteLine(GetHelloMessage());
 
 ChooseFile:
 Console.WriteLine("Введи путь до файла:");
@@ -88,5 +92,19 @@ string GetChooseActionMessage(LimitResult[] notOkLimits)
         sb.AppendLine($"[{number}]: Узнать подробнее о [{limitResult.Name}]");
     }
 
+    return sb.ToString();
+}
+
+string GetHelloMessage()
+{
+    var assembly = Assembly.GetExecutingAssembly();
+    var fvi = FileVersionInfo.GetVersionInfo(assembly.Location);
+    var version = fvi.FileVersion!;
+    
+    var sb = new StringBuilder();
+    sb.AppendLine("Привет! Если читаешь это сообщение, значит я... съел деда.");
+    sb.AppendLine($"CriminalChecker v{version}");
+    sb.AppendLine("Я - Kisus. Когда-нибудь я напишу здесь что-нибудь умное, ну а пока знай,");
+    sb.AppendLine("что это программа написана во благо ТПС юным энтузиастом и ст. модератором 7-го TMR (на момент написания этих строк).");
     return sb.ToString();
 }

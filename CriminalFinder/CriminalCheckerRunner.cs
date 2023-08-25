@@ -20,9 +20,8 @@ public static class CriminalCheckerRunner
 
         Console.WriteLine(GetHelloMessage());
 
-        var schematicsPath = GetOrCreateSchematicsPath();
-
         ChooseFile:
+        var schematicsPath = GetOrCreateSchematicsPath();
         var filePaths = Directory.GetFiles(schematicsPath, "*.schematic", SearchOption.TopDirectoryOnly);
 
         Space();
@@ -50,6 +49,11 @@ public static class CriminalCheckerRunner
 
         var filePath = filePaths[chooseFileActionNumber - 2];
 
+        if (!File.Exists(filePath))
+        {
+            Console.WriteLine("Файл пропал");
+            goto ChooseFile;
+        }
         var nbtParseResult = NbtParser.FromFile(filePath);
         var schematica = new Schematica(nbtParseResult);
         var limitsResult = LimitsChecker.CheckLimits(limits, schematica.GetBlockAmountMapping()).ToList();

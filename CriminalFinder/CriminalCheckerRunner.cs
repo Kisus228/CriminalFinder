@@ -25,6 +25,7 @@ public static class CriminalCheckerRunner
         ChooseFile:
         var filePaths = Directory.GetFiles(schematicsPath, "*.schematic", SearchOption.TopDirectoryOnly);
 
+        Space();
         Console.WriteLine("[0]: Сбросить конфиги");
         Console.WriteLine("[1]: Обновить список файлов");
         for (var i = 0; i < filePaths.Length; i++)
@@ -53,6 +54,8 @@ public static class CriminalCheckerRunner
         var schematica = new Schematica(nbtParseResult);
         var limitsResult = LimitsChecker.CheckLimits(limits, schematica.GetBlockAmountMapping()).ToList();
 
+        Space();
+        Console.WriteLine(Path.GetFileName(filePath));
         ConsoleTableBuilder
             .From(limitsResult)
             .WithColumn("Имя лимита", "Ограничение по базе", "Количество на базе", "Ограничение по чанку",
@@ -65,12 +68,13 @@ public static class CriminalCheckerRunner
         if (notOkLimits.Length == 0)
             goto ChooseFile;
 
-
+        Space();
         Console.WriteLine(GetChooseActionMessage(notOkLimits));
 
         ChooseActionLimit:
         if (!TryGetActionNumber(notOkLimits.Length, out var chosenLimitNumber))
         {
+            Console.WriteLine("Неправильно введён номер действия");
             goto ChooseActionLimit;
         }
 
@@ -79,6 +83,11 @@ public static class CriminalCheckerRunner
 
         var chosenLimit = notOkLimits[chosenLimitNumber - 1];
         var chunkAmounts = chosenLimit.BlockAmountMapping.ChunksAmount;
+
+        var chunkLimitStr = chosenLimit.ChunkLimit is not null ? chosenLimit.ChunkLimit.ToString() : "отсутствует";
+        Space();
+        Console.WriteLine($"[{chosenLimit.Name}]:");
+        Console.WriteLine($"Сумма: {chosenLimit.TotalAmount}. Огран по базе: {chosenLimit.TotalLimit}. Огран по чанку: {chunkLimitStr}. Результат проверки: {chosenLimit.LimitResultType}");
 
         for (var x = 0; x < chunkAmounts.GetLength(0); x++)
         {
@@ -95,8 +104,14 @@ public static class CriminalCheckerRunner
                 Console.WriteLine($"Координаты: [{chunkX}, {chunkZ}]. Количество: {amount}");
             }
         }
+        Space();
 
         goto ChooseActionLimit;
+    }
+
+    private static void Space()
+    {
+        Console.WriteLine();
     }
 
     private static Func<object, string> GetChunkAmountFormatter()

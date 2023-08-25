@@ -1,6 +1,6 @@
-﻿using UrodChecker.BlockAmountCalculations;
+﻿using CriminalChecker.BlockAmountCalculations;
 
-namespace UrodChecker.Limits;
+namespace CriminalChecker.Limits;
 
 public static class LimitsChecker
 {

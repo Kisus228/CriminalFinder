@@ -1,7 +1,7 @@
-﻿using UrodChecker.BlockAmountCalculations;
-using UrodChecker.Nbt;
+﻿using CriminalChecker.BlockAmountCalculations;
+using CriminalChecker.Nbt;
 
-namespace UrodChecker;
+namespace CriminalChecker;
 
 public class Schematica
 {

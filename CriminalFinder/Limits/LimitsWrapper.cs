@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace UrodChecker;
+namespace CriminalChecker.Limits;
 
 public class LimitsWrapper
 {

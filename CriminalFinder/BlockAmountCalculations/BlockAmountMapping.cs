@@ -1,4 +1,4 @@
-﻿namespace UrodChecker.BlockAmountCalculations;
+﻿namespace CriminalChecker.BlockAmountCalculations;
 
 public class BlockAmountMapping
 {

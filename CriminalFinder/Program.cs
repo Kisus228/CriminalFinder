@@ -5,10 +5,10 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using ConsoleTableExt;
-using UrodChecker;
-using UrodChecker.BlockAmountCalculations;
-using UrodChecker.Limits;
-using UrodChecker.Nbt;
+using CriminalChecker;
+using CriminalChecker.BlockAmountCalculations;
+using CriminalChecker.Limits;
+using CriminalChecker.Nbt;
 
 var limits = JsonSerializer.Deserialize<LimitsWrapper>(File.ReadAllText("./limits.json"))!.Limits;
 

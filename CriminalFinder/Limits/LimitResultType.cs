@@ -1,4 +1,4 @@
-﻿namespace UrodChecker;
+﻿namespace CriminalChecker.Limits;
 
 public enum LimitResultType
 {

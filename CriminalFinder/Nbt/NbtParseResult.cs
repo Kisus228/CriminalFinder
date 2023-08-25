@@ -1,4 +1,4 @@
-﻿namespace UrodChecker.Nbt;
+﻿namespace CriminalChecker.Nbt;
 
 public class NbtParseResult
 {

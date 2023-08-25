@@ -1,6 +1,6 @@
 ﻿using fNbt;
 
-namespace UrodChecker.Nbt;
+namespace CriminalChecker.Nbt;
 
 public static class NbtParser
 {

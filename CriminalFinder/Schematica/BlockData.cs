@@ -1,4 +1,4 @@
-﻿namespace CriminalChecker;
+﻿namespace CriminalChecker.Schematica;
 
 public class BlockData
 {

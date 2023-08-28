@@ -1,7 +1,7 @@
 ﻿using CriminalChecker.BlockAmountCalculations;
 using CriminalChecker.Nbt;
 
-namespace CriminalChecker;
+namespace CriminalChecker.Schematica;
 
 public class Schematica
 {

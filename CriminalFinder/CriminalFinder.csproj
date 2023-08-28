@@ -6,13 +6,13 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <RootNamespace>CriminalChecker</RootNamespace>
-        <AssemblyVersion>1.1.2</AssemblyVersion>
-        <FileVersion>1.1.2</FileVersion>
+        <AssemblyVersion>1.2.0</AssemblyVersion>
+        <FileVersion>1.2.0</FileVersion>
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="ConsoleTableExt" Version="3.2.0" />
       <PackageReference Include="fNbt" Version="0.6.4" />
+      <PackageReference Include="Spectre.Console" Version="0.47.1-preview.0.11" />
     </ItemGroup>
 
     <ItemGroup>

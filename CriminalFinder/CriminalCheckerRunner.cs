@@ -1,12 +1,12 @@
 ﻿using System.Diagnostics;
 using System.Reflection;
-using System.Text;
 using System.Text.Json;
-using ConsoleTableExt;
-using CriminalChecker.BlockAmountCalculations;
 using CriminalChecker.Configs;
+using CriminalChecker.Extensions;
 using CriminalChecker.Limits;
 using CriminalChecker.Nbt;
+using CriminalChecker.Variants;
+using Spectre.Console;
 
 namespace CriminalChecker;
 
@@ -18,145 +18,98 @@ public static class CriminalCheckerRunner
     {
         var limits = JsonSerializer.Deserialize<LimitsWrapper>(File.ReadAllText("./limits.json"))!.Limits;
 
-        Console.WriteLine(GetHelloMessage());
+        PrintHelloMessage();
 
         ChooseFile:
         var schematicsPath = GetOrCreateSchematicsPath();
         var filePaths = Directory.GetFiles(schematicsPath, "*.schematic", SearchOption.TopDirectoryOnly);
 
-        Space();
-        Console.WriteLine("[0]: Сбросить конфиги");
-        Console.WriteLine("[1]: Обновить список файлов");
-        for (var i = 0; i < filePaths.Length; i++)
-        {
-            Console.WriteLine($"[{i + 2}]: {Path.GetFileName(filePaths[i])}");
-        }
+        var startActionChoice = AnsiConsole.Prompt(
+            new SelectionPrompt<StartActionVariants>
+            {
+                Title = "Что хочешь сделать?",
+                Converter = action => action.GetEnumDescription()
+            }.AddChoices(Enum.GetValues<StartActionVariants>()));
 
-        if (!TryGetActionNumber(filePaths.Length + 1, out var chooseFileActionNumber))
+        if (startActionChoice == StartActionVariants.ResetConfigs)
         {
-            Console.WriteLine("Неправильно введён номер действия");
+            CreateSchematicsPath();
             goto ChooseFile;
         }
 
-        switch (chooseFileActionNumber)
-        {
-            case 0:
-                schematicsPath = CreateSchematicsPath();
-                goto ChooseFile;
-            case 1:
-                goto ChooseFile;
-        }
-
-        var filePath = filePaths[chooseFileActionNumber - 2];
+        var filePath = AnsiConsole.Prompt(
+            new SelectionPrompt<string>
+            {
+                Title = "Какую [green]схему[/] проверить?",
+                Converter = Path.GetFileName,
+                WrapAround = true,
+                MoreChoicesText = "[gray](Это ещё не всё. Листай ниже...)[/]"
+            }.AddChoices(filePaths));
 
         if (!File.Exists(filePath))
         {
-            Console.WriteLine("Файл пропал");
+            AnsiConsole.MarkupLineInterpolated($"[red][[Error]] Не найден файл по пути: [yellow]{filePath}[/][/]");
             goto ChooseFile;
         }
+
         var nbtParseResult = NbtParser.FromFile(filePath);
-        var schematica = new Schematica(nbtParseResult);
+        var schematica = new Schematica.Schematica(nbtParseResult);
         var limitsResult = LimitsChecker.CheckLimits(limits, schematica.GetBlockAmountMapping()).ToList();
 
-        Space();
-        Console.WriteLine(Path.GetFileName(filePath));
-        ConsoleTableBuilder
-            .From(limitsResult)
-            .WithColumn("Имя лимита", "Ограничение по базе", "Количество на базе", "Ограничение по чанку",
-                "Количество в чанках", "Результат проверки")
-            .WithFormatter(4, GetChunkAmountFormatter())
-            .ExportAndWriteLine();
+        var table = WidgetBuilder.GetSummaryTableFromLimits(limitsResult, Path.GetFileName(filePath));
+
+        AnsiConsole.Write(table);
 
         var notOkLimits = limitsResult.Where(result => result.LimitResultType != LimitResultType.AllIsOk).ToArray();
 
         if (notOkLimits.Length == 0)
             goto ChooseFile;
 
-        Space();
-        Console.WriteLine(GetChooseActionMessage(notOkLimits));
-
         ChooseActionLimit:
-        if (!TryGetActionNumber(notOkLimits.Length, out var chosenLimitNumber))
-        {
-            Console.WriteLine("Неправильно введён номер действия");
-            goto ChooseActionLimit;
-        }
+        var afterSummaryChoice = AnsiConsole.Prompt(
+            new SelectionPrompt<AfterSummaryTableVariants>
+            {
+                Title = "Куда дальше?",
+                Converter = action => action.GetEnumDescription()
+            }.AddChoices(Enum.GetValues<AfterSummaryTableVariants>()));
 
-        if (chosenLimitNumber == 0)
+        if (afterSummaryChoice == AfterSummaryTableVariants.ReturnToStart)
             goto ChooseFile;
 
-        var chosenLimit = notOkLimits[chosenLimitNumber - 1];
-        var chunkAmounts = chosenLimit.BlockAmountMapping.ChunksAmount;
-
-        var chunkLimitStr = chosenLimit.ChunkLimit is not null ? chosenLimit.ChunkLimit.ToString() : "отсутствует";
-        Space();
-        Console.WriteLine($"[{chosenLimit.Name}]:");
-        Console.WriteLine($"Сумма: {chosenLimit.TotalAmount}. Огран по базе: {chosenLimit.TotalLimit}. Огран по чанку: {chunkLimitStr}. Результат проверки: {chosenLimit.LimitResultType}");
-
-        for (var x = 0; x < chunkAmounts.GetLength(0); x++)
-        {
-            for (var z = 0; z < chunkAmounts.GetLength(1); z++)
+        var chosenLimitName = AnsiConsole.Prompt(
+            new SelectionPrompt<string>
             {
-                var amount = chunkAmounts[x, z];
+                Title = "Какой [red]огран[/] рассмотреть подробнее?"
+            }.AddChoices(notOkLimits.Select(limit => limit.Name)));
 
-                if (amount == 0)
-                    continue;
+        var chosenLimit = notOkLimits.Single(limit => limit.Name == chosenLimitName);
 
-                var chunkX = schematica.MinX + x * 16;
-                var chunkZ = schematica.MinZ + z * 16;
-
-                Console.WriteLine($"Координаты: [{chunkX}, {chunkZ}]. Количество: {amount}");
-            }
-        }
-        Space();
+        var limitTable = WidgetBuilder.GetLimitInfoTable(chosenLimit, schematica.MinX, schematica.MinZ);
+        var limitInfoPanel = WidgetBuilder.GetLimitInfoPanel(chosenLimit);
+        AnsiConsole.Write(limitTable);
+        AnsiConsole.Write(limitInfoPanel);
 
         goto ChooseActionLimit;
     }
 
-    private static void Space()
-    {
-        Console.WriteLine();
-    }
-
-    private static Func<object, string> GetChunkAmountFormatter()
-    {
-        return obj =>
-            $"[{string.Join(", ", ((BlockAmountMapping)obj).ChunksAmount.Cast<int>().Where(amount => amount != 0))}]";
-    }
-
-    private static string GetChooseActionMessage(LimitResult[] notOkLimits)
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine("[0]: Вернуться к выбору файла");
-
-        for (var i = 0; i < notOkLimits.Length; i++)
-        {
-            var number = i + 1;
-            var limitResult = notOkLimits[i];
-            sb.AppendLine($"[{number}]: Узнать подробнее о [{limitResult.Name}]");
-        }
-
-        return sb.ToString();
-    }
-
-    private static string GetHelloMessage()
+    private static void PrintHelloMessage()
     {
         var assembly = Assembly.GetExecutingAssembly();
         var fvi = FileVersionInfo.GetVersionInfo(assembly.Location);
         var version = fvi.FileVersion!;
 
-        var sb = new StringBuilder();
-        sb.AppendLine("Привет! Если читаешь это сообщение, значит я... съел деда.");
-        sb.AppendLine($"CriminalChecker v{version}");
-        sb.AppendLine("Я - Kisus. Когда-нибудь я напишу здесь что-нибудь умное, ну а пока знай,");
-        sb.AppendLine(
-            "что это программа написана во благо ТПС юным энтузиастом и ст. модератором 7-го TMR (на момент написания этих строк).");
-        return sb.ToString();
+        AnsiConsole.Write(
+            new FigletText("Made By Kisus").Color(Color.Red));
+        AnsiConsole.Write(new FigletText($"Criminal Finder v{version}").Color(Color.Yellow));
+
+        var discord = "@kisus".WithMarkup(Color.Fuchsia);
+        var panel = new Panel($"Со всеми ошибками и пожеланиями обращаться в дискорд: {discord}");
+        AnsiConsole.Write(panel);
     }
 
     private static string GetOrCreateSchematicsPath()
     {
-        const string configErrorDefaultMessage = "[Error] С конфигами что-то не так. Создай их заново.";
+        const string configErrorDefaultMessage = "[red][[Error]] С конфигами что-то не так. Сейчас создадим заново.[/]";
 
         if (File.Exists(ConfigFileName))
         {
@@ -169,14 +122,14 @@ public static class CriminalCheckerRunner
                     if (Directory.Exists(schematicsPath))
                         return schematicsPath;
 
-                    Console.WriteLine("Данной директории не существует");
+                    AnsiConsole.Write(new Markup("Данной директории не существует", new Style(Color.Red)));
                 }
                 else
-                    Console.WriteLine(configErrorDefaultMessage);
+                    AnsiConsole.MarkupLine(configErrorDefaultMessage);
             }
             catch (JsonException)
             {
-                Console.WriteLine(configErrorDefaultMessage);
+                AnsiConsole.MarkupLine(configErrorDefaultMessage);
             }
         }
 
@@ -185,8 +138,7 @@ public static class CriminalCheckerRunner
 
     private static string CreateSchematicsPath()
     {
-        Console.WriteLine("Укажите путь до папки со схемами:");
-        var newSchematicsPath = Console.ReadLine()!;
+        var newSchematicsPath = AnsiConsole.Ask<string>($"Укажите путь до {"папки со схемами".WithMarkup(Color.Aqua)}:");
         var config = new Config
         {
             SchematicsPath = newSchematicsPath
@@ -195,12 +147,5 @@ public static class CriminalCheckerRunner
         File.WriteAllText(ConfigFileName, configFileContent);
 
         return GetOrCreateSchematicsPath();
-    }
-
-    private static bool TryGetActionNumber(int maxNumber, out int actionNumber)
-    {
-        var actionNumberStr = Console.ReadLine();
-        return int.TryParse(actionNumberStr, out actionNumber) && actionNumber <= maxNumber &&
-               actionNumber >= 0;
     }
 }

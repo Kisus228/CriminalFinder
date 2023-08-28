@@ -14,8 +14,16 @@ public static class CriminalCheckerRunner
 {
     private const string ConfigFileName = "config.json";
 
+    private static CancellationTokenSource? cancellationTokenSource;
+
     public static void Run()
     {
+        Console.CancelKeyPress += (sender, args) =>
+        {
+            cancellationTokenSource?.Cancel();
+            args.Cancel = true;
+        };
+
         var limits = JsonSerializer.Deserialize<LimitsWrapper>(File.ReadAllText("./limits.json"))!.Limits;
 
         PrintHelloMessage();
@@ -42,7 +50,7 @@ public static class CriminalCheckerRunner
             {
                 Title = "Какую [green]схему[/] проверить?",
                 Converter = Path.GetFileName,
-                WrapAround = true,
+                PageSize = int.MaxValue,
                 MoreChoicesText = "[gray](Это ещё не всё. Листай ниже...)[/]"
             }.AddChoices(filePaths));
 
@@ -66,21 +74,9 @@ public static class CriminalCheckerRunner
             goto ChooseFile;
 
         ChooseActionLimit:
-        var afterSummaryChoice = AnsiConsole.Prompt(
-            new SelectionPrompt<AfterSummaryTableVariants>
-            {
-                Title = "Куда дальше?",
-                Converter = action => action.GetEnumDescription()
-            }.AddChoices(Enum.GetValues<AfterSummaryTableVariants>()));
-
-        if (afterSummaryChoice == AfterSummaryTableVariants.ReturnToStart)
+        var chosenLimitName = SelectLimitName(notOkLimits);
+        if (chosenLimitName is null)
             goto ChooseFile;
-
-        var chosenLimitName = AnsiConsole.Prompt(
-            new SelectionPrompt<string>
-            {
-                Title = "Какой [red]огран[/] рассмотреть подробнее?"
-            }.AddChoices(notOkLimits.Select(limit => limit.Name)));
 
         var chosenLimit = notOkLimits.Single(limit => limit.Name == chosenLimitName);
 
@@ -90,6 +86,41 @@ public static class CriminalCheckerRunner
         AnsiConsole.Write(limitInfoPanel);
 
         goto ChooseActionLimit;
+    }
+
+    private static string? SelectLimitName(LimitResult[] limitResults)
+    {
+        cancellationTokenSource = new CancellationTokenSource();
+        var token = cancellationTokenSource.Token;
+
+        var cursorTop = Console.CursorTop;
+
+        var selectionPrompt = new SelectionPrompt<string>
+        {
+            Title =
+                $"Какой {"огран".WithMarkup(Color.Red)} рассмотреть подробнее? {"(Нажми [yellow]CTRL + C[/], чтобы выйти из схемы)".WithMarkup(Color.Aqua)}"
+        };
+        selectionPrompt.AddChoices(limitResults.Select(limit => limit.Name));
+        try
+        {
+            var limitName = selectionPrompt.ShowAsync(AnsiConsole.Console, token).GetAwaiter().GetResult();
+            return limitName;
+        }
+        catch (OperationCanceledException)
+        {
+            Console.SetCursorPosition(0, cursorTop);
+
+            for (var i = 0; i < limitResults.Length + 3; i++)
+                Console.WriteLine(new string(' ', Console.WindowWidth));
+
+            Console.SetCursorPosition(0, cursorTop);
+            AnsiConsole.WriteLine();
+            return null;
+        }
+        finally
+        {
+            cancellationTokenSource.Dispose();
+        }
     }
 
     private static void PrintHelloMessage()
@@ -138,7 +169,8 @@ public static class CriminalCheckerRunner
 
     private static string CreateSchematicsPath()
     {
-        var newSchematicsPath = AnsiConsole.Ask<string>($"Укажите путь до {"папки со схемами".WithMarkup(Color.Aqua)}:");
+        var newSchematicsPath =
+            AnsiConsole.Ask<string>($"Укажите путь до {"папки со схемами".WithMarkup(Color.Aqua)}:");
         var config = new Config
         {
             SchematicsPath = newSchematicsPath

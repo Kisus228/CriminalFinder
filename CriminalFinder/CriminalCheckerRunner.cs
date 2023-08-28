@@ -93,8 +93,6 @@ public static class CriminalCheckerRunner
         cancellationTokenSource = new CancellationTokenSource();
         var token = cancellationTokenSource.Token;
 
-        var cursorTop = Console.CursorTop;
-
         var selectionPrompt = new SelectionPrompt<string>
         {
             Title =
@@ -108,13 +106,14 @@ public static class CriminalCheckerRunner
         }
         catch (OperationCanceledException)
         {
-            Console.SetCursorPosition(0, cursorTop);
+            var linesCount = limitResults.Length + 2;
+            var start = Console.CursorTop - linesCount + 1;
+            Console.SetCursorPosition(0, start);
 
-            for (var i = 0; i < limitResults.Length + 3; i++)
+            for (var i = 0; i < linesCount; i++)
                 Console.WriteLine(new string(' ', Console.WindowWidth));
 
-            Console.SetCursorPosition(0, cursorTop);
-            AnsiConsole.WriteLine();
+            Console.SetCursorPosition(0, start);
             return null;
         }
         finally

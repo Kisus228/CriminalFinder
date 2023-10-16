@@ -1,9 +1,9 @@
-﻿using System.Text.Json.Serialization;
+﻿using YamlDotNet.Serialization;
 
 namespace CriminalChecker.Limits;
 
 public class LimitsWrapper
 {
-    [JsonPropertyName("limits")]
+    [YamlMember(Alias = "limits")]
     public Limit[] Limits { get; set; }
 }

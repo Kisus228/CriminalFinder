@@ -1,18 +1,18 @@
-﻿using System.Text.Json.Serialization;
+﻿using YamlDotNet.Serialization;
 
 namespace CriminalChecker.Limits;
 
 public class Limit
 {
-    [JsonPropertyName("name")]
+    [YamlMember(Alias = "name")]
     public string Name { get; set; }
     
-    [JsonPropertyName("ids")]
+    [YamlMember(Alias = "ids")]
     public string[] IDs { get; set; }
     
-    [JsonPropertyName("totalCount")]
+    [YamlMember(Alias = "totalCount")]
     public int TotalCount { get; set; }
     
-    [JsonPropertyName("chunkCount")]
+    [YamlMember(Alias = "chunkCount")]
     public int? ChunkCount { get; set; }
 }

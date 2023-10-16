@@ -24,7 +24,8 @@ public static class CriminalCheckerRunner
             args.Cancel = true;
         };
 
-        var limits = JsonSerializer.Deserialize<LimitsWrapper>(File.ReadAllText("./limits.json"))!.Limits;
+        var deserializer = new YamlDotNet.Serialization.Deserializer();
+        var limits = deserializer.Deserialize<LimitsWrapper>(File.ReadAllText("./limits.yaml")).Limits;
 
         PrintHelloMessage();
 

@@ -28,11 +28,9 @@ public static class CriminalCheckerRunner
         var limits = deserializer.Deserialize<LimitsWrapper>(File.ReadAllText("./limits.yaml")).Limits;
 
         PrintHelloMessage();
-
-        ChooseFile:
         var schematicsPath = GetOrCreateSchematicsPath();
-        var filePaths = Directory.GetFiles(schematicsPath, "*.schematic", SearchOption.TopDirectoryOnly);
-
+        
+        StartAction:
         var startActionChoice = AnsiConsole.Prompt(
             new SelectionPrompt<StartActionVariants>
             {
@@ -43,9 +41,17 @@ public static class CriminalCheckerRunner
         if (startActionChoice == StartActionVariants.ResetConfigs)
         {
             CreateSchematicsPath();
-            goto ChooseFile;
+            goto StartAction;
         }
 
+        var schematicsPaths = GetSchematicsPaths(schematicsPath);
+
+        if (schematicsPaths.Length == 0)
+        {
+            AnsiConsole.MarkupLine("[red][[Error]] Схемы в папке остутствуют[/]");
+            goto StartAction;
+        }
+        
         var filePath = AnsiConsole.Prompt(
             new SelectionPrompt<string>
             {
@@ -53,12 +59,12 @@ public static class CriminalCheckerRunner
                 Converter = Path.GetFileName,
                 PageSize = int.MaxValue,
                 MoreChoicesText = "[gray](Это ещё не всё. Листай ниже...)[/]"
-            }.AddChoices(filePaths));
+            }.AddChoices(schematicsPaths));
 
         if (!File.Exists(filePath))
         {
             AnsiConsole.MarkupLineInterpolated($"[red][[Error]] Не найден файл по пути: [yellow]{filePath}[/][/]");
-            goto ChooseFile;
+            goto StartAction;
         }
 
         var nbtParseResult = NbtParser.FromFile(filePath);
@@ -72,12 +78,12 @@ public static class CriminalCheckerRunner
         var notOkLimits = limitsResult.Where(result => result.LimitResultType != LimitResultType.AllIsOk).ToArray();
 
         if (notOkLimits.Length == 0)
-            goto ChooseFile;
+            goto StartAction;
 
         ChooseActionLimit:
         var chosenLimitName = SelectLimitName(notOkLimits);
         if (chosenLimitName is null)
-            goto ChooseFile;
+            goto StartAction;
 
         var chosenLimit = notOkLimits.Single(limit => limit.Name == chosenLimitName);
 
@@ -87,6 +93,11 @@ public static class CriminalCheckerRunner
         AnsiConsole.Write(limitInfoPanel);
 
         goto ChooseActionLimit;
+    }
+
+    private static string[] GetSchematicsPaths(string schematicsPath)
+    {
+        return Directory.GetFiles(schematicsPath, "*.schematic", SearchOption.TopDirectoryOnly);
     }
 
     private static string? SelectLimitName(LimitResult[] limitResults)

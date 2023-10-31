@@ -56,7 +56,7 @@ public static class CriminalCheckerRunner
             new SelectionPrompt<string>
             {
                 Title = "Какую [green]схему[/] проверить?",
-                Converter = Path.GetFileName,
+                Converter = GetFilePathConverter(),
                 PageSize = int.MaxValue,
                 MoreChoicesText = "[gray](Это ещё не всё. Листай ниже...)[/]"
             }.AddChoices(schematicsPaths));
@@ -97,8 +97,15 @@ public static class CriminalCheckerRunner
 
     private static string[] GetSchematicsPaths(string schematicsPath)
     {
-        return Directory.GetFiles(schematicsPath, "*.schematic", SearchOption.TopDirectoryOnly);
+        return Directory.GetFiles(schematicsPath, "*.schematic", SearchOption.TopDirectoryOnly)
+            .OrderByDescending(File.GetCreationTime)
+            .ToArray();
     }
+
+    private static Func<string, string> GetFilePathConverter()
+    {
+        return path => $"{Path.GetFileName(path)} ({File.GetCreationTime(path):dd.MM.yyyy HH:mm})";
+    } 
 
     private static string? SelectLimitName(LimitResult[] limitResults)
     {

@@ -68,6 +68,14 @@ public static class CriminalCheckerRunner
         }
 
         var nbtParseResult = NbtParser.FromFile(filePath);
+
+        if (nbtParseResult.Width % 16 != 0 || nbtParseResult.Length % 16 != 0 || nbtParseResult.MinX % 16 != 0 ||
+            nbtParseResult.MinZ % 16 != 0)
+        {
+            AnsiConsole.MarkupLineInterpolated($"[red][[Error]] Схематика создана не по чанкам.[/]");
+            goto StartAction;
+        }
+        
         var schematica = new Schematica.Schematica(nbtParseResult);
         var limitsResult = LimitsChecker.CheckLimits(limits, schematica.GetBlockAmountMapping()).ToList();
 

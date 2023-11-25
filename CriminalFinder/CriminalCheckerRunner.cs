@@ -44,6 +44,16 @@ public static class CriminalCheckerRunner
             goto StartAction;
         }
 
+        if (startActionChoice == StartActionVariants.ClearSchematics)
+        {
+            foreach (var fileToDelete in new DirectoryInfo(schematicsPath).GetFiles())
+            {
+                fileToDelete.Delete();
+            }
+            AnsiConsole.MarkupLine("[green]Схемы успешно удалены[/]");
+            goto StartAction;
+        }
+
         var schematicsPaths = GetSchematicsPaths(schematicsPath);
 
         if (schematicsPaths.Length == 0)
